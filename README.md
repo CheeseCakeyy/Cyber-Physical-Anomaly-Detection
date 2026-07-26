@@ -41,8 +41,15 @@ F2 weights recall higher than precision, which is appropriate for critical infra
 
 ```text
 Cyber-Physical-Anomaly-Detection/
-|-- Project INFO README.md
 |-- README.md
+|-- Dockerfile.lgbm
+|-- run_docker_lgbm.sh
+|-- run_docker_lgbm.ps1
+|-- .dockerignore
+|-- .gitignore
+|-- src/
+|   |-- __init__.py
+|   |-- optuna_lgbm_runner.py
 |-- experiments/
 |   |-- detecting-anomalies-baseline.ipynb
 |   |-- detecting-anomalies-optuna-xgb.ipynb
@@ -56,8 +63,15 @@ Cyber-Physical-Anomaly-Detection/
 |   |-- seed-averaging.ipynb
 |   |-- training-on-full-dataset.ipynb
 |-- submissions/
-    |-- submission_*.csv
+|   |-- submission_*.csv
+|-- data/
+|   |-- train.csv
+|   |-- test.csv
+|-- kaggle-working/
+    |-- submission_LGBM.csv
 ```
+
+`data/` and `kaggle-working/` are local-only folders ignored by Git. `data/` holds the Kaggle competition CSVs, while `kaggle-working/` receives Docker-generated outputs.
 
 Note: `detecting-anomalies-lgbm-digit-decompostion.ipynb` appears to be an earlier misspelled duplicate/variant of the digit-decomposition experiment.
 
@@ -277,18 +291,47 @@ The notebooks expect the competition data files to be available in the runtime e
 
 `experiments/detecting-anomalies-optuna-lgbm.ipynb` has been converted into a repeatable batch runner at `src/optuna_lgbm_runner.py`.
 
-Put the Kaggle files here:
+The recommended way to run this converted notebook is through the pinned Kaggle CPU Docker image. That path matches the original Kaggle notebook runtime more closely than a lightweight local Python environment.
+
+#### 1. Prepare the data
+
+If you have the Kaggle CLI configured, download the competition files into `data/`:
+
+```bash
+mkdir -p data
+kaggle competitions download -c cyber-physical-anomaly-detection-for-der-systems -p data
+```
+
+On Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force -Path data
+kaggle competitions download -c cyber-physical-anomaly-detection-for-der-systems -p data
+```
+
+That should produce:
 
 ```text
 data/train.csv
 data/test.csv
+data/sample_submission.csv
 ```
+
+`sample_submission.csv` is optional for this runner; `train.csv` and `test.csv` are required.
+
+#### 2. Build the wrapper image
 
 Build the Kaggle-based CPU image:
 
 ```bash
 docker build --platform linux/amd64 -f Dockerfile.lgbm -t der-optuna-lgbm .
 ```
+
+This image does not manually install the notebook dependencies. Instead, it pins the same Kaggle Python base image used by the original notebook environment, which already includes packages such as `polars`, `scikit-learn`, `lightgbm`, and `optuna`.
+
+On Apple Silicon, keep `--platform linux/amd64` for both `docker build` and `docker run`; the pinned Kaggle image is built for `linux/amd64`.
+
+#### 3. Run the pinned workflow
 
 Run the full LightGBM pipeline:
 
@@ -302,13 +345,28 @@ On Windows PowerShell:
 .\run_docker_lgbm.ps1
 ```
 
+The script:
+
+- mounts the repo root at `/workspace`
+- mounts `data/` at `/kaggle/input/competitions/cyber-physical-anomaly-detection-for-der-systems`
+- mounts `kaggle-working/` at `/kaggle/working`
+- runs `python -m src.optuna_lgbm_runner` inside the container
+
 For a quick smoke test, use fewer rows and fewer trees:
 
 ```bash
 ./run_docker_lgbm.sh --limit-rows 10000 --n-estimators 50
 ```
 
-The output is written to:
+On Windows PowerShell:
+
+```powershell
+.\run_docker_lgbm.ps1 --limit-rows 10000 --n-estimators 50
+```
+
+#### 4. Collect the output
+
+The submission is written to:
 
 ```text
 kaggle-working/submission_LGBM.csv
@@ -328,11 +386,3 @@ Python packages used across the notebooks include:
 - `matplotlib`
 
 Because the experiments tune thresholds on validation probabilities, the exact split seed and preprocessing pipeline should be preserved when comparing validation F2 scores. Submission scores should be treated as the final comparable metric across notebooks.
-
-## Recommended Next Steps
-
-1. Consolidate the strongest LightGBM pipeline into a clean training script.
-2. Remove duplicate or misspelled notebooks after preserving useful results.
-3. Add a `requirements.txt` or environment file with pinned package versions.
-4. Track validation splits, thresholds, and submission filenames in a structured experiment log.
-5. Test small ensembles of the best LGBM and XGBoost probability outputs rather than only seed averaging within one model family.
