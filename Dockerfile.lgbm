@@ -1,0 +1,12 @@
+FROM gcr.io/kaggle-images/python@sha256:02c72a7c98e5e0895056901d9c715d181cd30eae392491235dfea93e6d0de3ed
+
+LABEL org.opencontainers.image.title="DER Optuna LightGBM Kaggle runtime"
+LABEL org.opencontainers.image.description="Pinned Kaggle CPU environment for detecting-anomalies-optuna-lgbm.ipynb"
+
+WORKDIR /workspace
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+CMD ["/bin/bash"]
+

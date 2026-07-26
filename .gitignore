@@ -1,0 +1,11 @@
+# Local Kaggle data and generated outputs
+data/
+kaggle-working/
+*.csv
+
+# Python/tooling
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+

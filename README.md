@@ -273,6 +273,47 @@ The best recorded submission is `submission_LGBM - 0.91150.csv`, with several ot
 
 The notebooks expect the competition data files to be available in the runtime environment. They were not included in this repository snapshot, so exact reruns require placing the original `train.csv`, `test.csv`, and sample submission files where the notebooks expect them.
 
+### Dockerized LightGBM Notebook
+
+`experiments/detecting-anomalies-optuna-lgbm.ipynb` has been converted into a repeatable batch runner at `src/optuna_lgbm_runner.py`.
+
+Put the Kaggle files here:
+
+```text
+data/train.csv
+data/test.csv
+```
+
+Build the Kaggle-based CPU image:
+
+```bash
+docker build --platform linux/amd64 -f Dockerfile.lgbm -t der-optuna-lgbm .
+```
+
+Run the full LightGBM pipeline:
+
+```bash
+./run_docker_lgbm.sh
+```
+
+On Windows PowerShell:
+
+```powershell
+.\run_docker_lgbm.ps1
+```
+
+For a quick smoke test, use fewer rows and fewer trees:
+
+```bash
+./run_docker_lgbm.sh --limit-rows 10000 --n-estimators 50
+```
+
+The output is written to:
+
+```text
+kaggle-working/submission_LGBM.csv
+```
+
 Python packages used across the notebooks include:
 
 - `polars`
